@@ -1,0 +1,33 @@
+# Ignore packaged skill files
+*.zip
+
+# Ignore temporary files
+*.tmp
+tmp*
+.DS_Store
+Thumbs.db
+
+# Ignore editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore OS files
+.DS_Store
+desktop.ini
+
+# Ignore node_modules if any scripts are added later
+node_modules/
+
+# Ignore Python cache if any scripts are added later
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Ignore test outputs
+test-output/
+coverage/
