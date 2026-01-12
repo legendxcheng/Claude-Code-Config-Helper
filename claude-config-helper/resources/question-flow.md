@@ -15,6 +15,7 @@ What would you like to configure for this project? You can choose one or more:
 4. File-type specific rules (e.g., rules only for TypeScript files)
 5. Other project-specific instructions
 6. Custom slash commands (reusable prompts you can invoke with /command-name)
+7. Hooks (automation: auto-format code, protect files, log commands, notifications)
 
 Please tell me the number(s) or describe what you'd like to configure.
 ```
@@ -38,6 +39,17 @@ Based on the user's answer from Step 1, decide which file type to create:
 - Explain: "We'll create a custom slash command that you can invoke with /command-name"
 - Ask: "What would you like to name this command? (e.g., 'review', 'deploy', 'test-api')"
 - Then proceed to Step 2b for commands
+
+**If user chose option 7 (hooks)**:
+- **Redirect to the Hooks-specific question flow**
+- Load `resources/hooks/question-flow-hooks.md` for detailed guidance
+- Explain: "Hooks are shell commands that run automatically at specific points in Claude's workflow"
+- Common use cases to mention:
+  - Auto-format code after edits (PostToolUse)
+  - Block edits to sensitive files (PreToolUse)
+  - Log all bash commands (PreToolUse)
+  - Custom notifications (Notification)
+- Proceed to Steps H1-H5 in the hooks question flow
 
 **If user chose multiple options**:
 - Suggest creating both CLAUDE.md for global rules and separate rule files for file-specific rules

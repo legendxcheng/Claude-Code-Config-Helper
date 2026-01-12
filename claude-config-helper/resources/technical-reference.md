@@ -166,3 +166,160 @@ When interacting with users:
 4. **Confirm understanding**: Repeat back what you understood before creating files
 5. **Be patient**: Users may not know exactly what they want - help them discover it
 6. **Explain as you go**: Briefly explain why you're asking each question
+
+## Hooks Configuration
+
+Hooks are configured in `settings.json` (either user-level or project-level).
+
+### Hook File Locations
+
+| Location | Path | Scope |
+|----------|------|-------|
+| User settings | `~/.claude/settings.json` | All projects |
+| Project settings | `.claude/settings.json` | Current project only |
+
+### JSON Structure
+
+```json
+{
+  "hooks": {
+    "EventType": [
+      {
+        "matcher": "ToolPattern",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "shell command to execute"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Hook Event Types
+
+| Event | Trigger | Can Block | Use Case |
+|-------|---------|-----------|----------|
+| PreToolUse | Before tool executes | Yes (exit 2) | Validation, protection, logging |
+| PostToolUse | After tool completes | No | Formatting, post-processing |
+| PermissionRequest | Permission dialog shown | Yes | Auto-allow/deny |
+| Notification | Notification sent | No | Custom alerts |
+| Stop | Response complete | No | Cleanup, summaries |
+| UserPromptSubmit | User submits prompt | No | Pre-processing |
+| SessionStart | Session begins | No | Initialization |
+| SessionEnd | Session ends | No | Cleanup |
+| SubagentStop | Subagent completes | No | Task follow-up |
+| PreCompact | Before compaction | No | Pre-compact tasks |
+
+### Matcher Syntax
+
+| Pattern | Description | Example |
+|---------|-------------|---------|
+| Single tool | Match one tool | `Bash` |
+| Multiple tools | Match several tools | `Edit\|Write` |
+| All tools | Match everything | `*` or `""` |
+
+**Common Tool Names**:
+- `Bash` - Shell command execution
+- `Edit` - File editing (modify existing content)
+- `Write` - File creation/overwrite
+- `Read` - File reading
+- `Glob` - File pattern matching
+- `Grep` - Content searching
+- `Task` - Subagent tasks
+- `WebFetch` - Web requests
+
+### Exit Codes
+
+For **PreToolUse** hooks only:
+
+| Exit Code | Effect |
+|-----------|--------|
+| 0 | Allow operation to proceed |
+| 2 | Block operation (with feedback to Claude) |
+| Other | Treated as error, operation proceeds |
+
+### Environment Variables
+
+Available in hook commands:
+
+| Variable | Description |
+|----------|-------------|
+| `$CLAUDE_PROJECT_DIR` | Current project directory |
+
+### Hook Input Data (stdin)
+
+Hooks receive JSON data via stdin:
+
+**For Edit/Write tools**:
+```json
+{
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "/path/to/file.ts",
+    "old_string": "original text",
+    "new_string": "replacement text"
+  }
+}
+```
+
+**For Bash tool**:
+```json
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "npm test",
+    "description": "Run tests"
+  }
+}
+```
+
+### Common jq Patterns
+
+Extract file path:
+```bash
+jq -r '.tool_input.file_path'
+```
+
+Extract command:
+```bash
+jq -r '.tool_input.command'
+```
+
+Log with timestamp:
+```bash
+jq -r '"[\(now | strftime(\"%Y-%m-%d %H:%M:%S\"))] \(.tool_input.command)"'
+```
+
+JSON output:
+```bash
+jq -c '{timestamp: (now | todate), command: .tool_input.command}'
+```
+
+### Merging with Existing Settings
+
+When updating `settings.json`:
+
+1. **File doesn't exist**: Create new file with hooks configuration
+2. **File exists without hooks**: Add `hooks` key to existing configuration
+3. **File exists with hooks**: Merge new hooks with existing ones
+   - Add new event types as new keys
+   - Append to existing event type arrays
+
+### Hook Verification
+
+After creating hooks, users can verify with:
+- `/hooks` command - View all registered hooks
+- Check `settings.json` directly
+
+### Security Considerations
+
+Remind users:
+- Hooks run automatically with environment credentials
+- Review commands carefully before enabling
+- Don't hardcode secrets in hook commands
+- Test in safe environment first
+- Be cautious with hooks from unknown sources
+

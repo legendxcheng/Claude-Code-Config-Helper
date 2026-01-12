@@ -357,3 +357,200 @@ Does this look good? Should I create this file?"
 "✓ Created ./.claude/commands/fix-issue.md
 
 You can now use `/fix-issue 123` to fix issue #123. The issue number will be passed to Claude automatically. Would you like to create any other commands?"
+
+## Example 6: Code Formatting Hook
+
+**User**: "I want Claude to automatically format my TypeScript files after editing"
+
+**Claude**: "I'll help you set up auto-formatting! What would you like to configure for this project?
+
+1. Build and test commands
+2. Code style and formatting preferences
+3. Architecture patterns and conventions
+4. File-type specific rules
+5. Other project-specific instructions
+6. Custom slash commands
+7. Hooks (automation: auto-format code, protect files, log commands, notifications)
+
+Please tell me the number(s) or describe what you'd like to configure."
+
+**User**: "7"
+
+**Claude**: "Hooks are shell commands that run automatically at specific points in Claude's workflow. What kind of automation do you want to set up?
+
+1. **PreToolUse** - Run before a tool executes (can block the operation)
+2. **PostToolUse** - Run after a tool completes (for post-processing) ← *Recommended for formatting*
+3. **Notification** - Run when Claude sends notifications
+4. **Stop** - Run when Claude finishes responding
+5. Other options...
+
+For auto-formatting, PostToolUse is the right choice since we want to format after files are edited."
+
+**User**: "2 - PostToolUse"
+
+**Claude**: "Where should this hook be stored?
+
+1. **User settings** (`~/.claude/settings.json`) - Applies to all your projects
+2. **Project settings** (`.claude/settings.json`) - Only this project"
+
+**User**: "2 - project only"
+
+**Claude**: "Which tools should trigger this formatting hook?
+
+1. **Specific tool** - Match a single tool
+2. **Multiple tools** - Match several tools (Edit|Write) ← *Recommended*
+3. **All tools** - Match any tool"
+
+**User**: "2"
+
+**Claude**: "I'll use `Edit|Write` to catch both file edits and new file creation.
+
+For TypeScript formatting with Prettier, I'll create:
+
+**File**: ./.claude/settings.json
+
+**Contents**:
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -qE '\\.(ts|tsx)$'; then npx prettier --write \"$file_path\"; fi; }"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This will automatically run Prettier on any .ts or .tsx file after I edit or create it.
+
+Does this look good? Should I create this configuration?"
+
+**User**: "yes"
+
+**Claude**: [Creates file using Write tool]
+
+"✓ Created ./.claude/settings.json
+
+**What happens now:**
+- Every time I edit or create a TypeScript file, Prettier will automatically format it
+- Other file types won't be affected
+
+**To verify:**
+- Run `/hooks` to see your registered hooks
+
+**Prerequisites:**
+- Make sure Prettier is installed: `npm install --save-dev prettier`
+
+Would you like to add any other hooks?"
+
+## Example 7: File Protection Hook
+
+**User**: "I need to prevent Claude from editing my .env files"
+
+**Claude**: "I'll help you set up file protection! What would you like to configure for this project?
+
+1. Build and test commands
+2. Code style and formatting preferences
+3. Architecture patterns and conventions
+4. File-type specific rules
+5. Other project-specific instructions
+6. Custom slash commands
+7. Hooks (automation: auto-format code, protect files, log commands, notifications)
+
+Please tell me the number(s) or describe what you'd like to configure."
+
+**User**: "7 - hooks"
+
+**Claude**: "What kind of automation do you want to set up?
+
+1. **PreToolUse** - Run before a tool executes (can block the operation) ← *Required for blocking*
+2. **PostToolUse** - Run after a tool completes
+3. **Notification** - Run when Claude sends notifications
+4. Other options...
+
+For file protection, PreToolUse is required since we need to block the operation before it happens."
+
+**User**: "1"
+
+**Claude**: "Where should this hook be stored?
+
+1. **User settings** (`~/.claude/settings.json`) - Block these files in all projects
+2. **Project settings** (`.claude/settings.json`) - Only this project"
+
+**User**: "1 - everywhere"
+
+**Claude**: "Which tools should this protection apply to?
+
+1. **Specific tool** - Match a single tool
+2. **Multiple tools** - Match Edit|Write ← *Recommended for file protection*
+3. **All tools** - Match any tool"
+
+**User**: "2"
+
+**Claude**: "Besides .env files, would you like to protect any other files? Common choices:
+- `credentials.json`
+- `.git/` directory
+- `package-lock.json`
+- Files in `/secrets/` directory"
+
+**User**: "Yes, add credentials.json and secrets folder"
+
+**Claude**: "I'll create/update your user settings:
+
+**File**: ~/.claude/settings.json
+
+**Contents**:
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json, sys; data=json.load(sys.stdin); path=data.get('tool_input',{}).get('file_path',''); sys.exit(2 if any(p in path for p in ['.env', 'credentials.json', '/secrets/']) else 0)\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**How it works:**
+- Exit code `2` blocks the operation
+- Exit code `0` allows it
+- When blocked, I'll receive feedback that the file is protected
+
+**Protected patterns:**
+- Any file with `.env` in the path
+- Files named `credentials.json`
+- Any file in a `secrets` directory
+
+Does this look good? Should I create this configuration?"
+
+**User**: "yes"
+
+**Claude**: [Creates file using Write tool]
+
+"✓ Created ~/.claude/settings.json
+
+**What happens now:**
+- When I try to edit `.env`, `credentials.json`, or files in `secrets/`, the operation will be blocked
+- I'll be informed that the file is protected and cannot be modified
+- All other files can be edited normally
+
+**To verify:**
+- Run `/hooks` to see your registered hooks
+- Try asking me to edit a .env file - I should be blocked
+
+Would you like to add any other protections or hooks?"
+

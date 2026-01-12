@@ -305,6 +305,247 @@ When organizing related commands in subdirectories:
 
 **Note**: If commands in different namespaces share the same name, they will both appear in /help with their namespace shown to distinguish them.
 
+## Scenario H: Simple Hook Configuration
+
+When creating a simple hook (single event, single command):
+
+1. **Determine storage location**: User settings (`~/.claude/settings.json`) or project settings (`.claude/settings.json`)
+2. **Create or update settings.json**: If file doesn't exist, create it. If it exists, merge the new hook.
+3. **Structure the content**: JSON format with hooks object
+
+**Template**:
+```json
+{
+  "hooks": {
+    "[EventType]": [
+      {
+        "matcher": "[ToolPattern]",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[shell command]"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Example (auto-format TypeScript)**:
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read fp; [[ \"$fp\" == *.ts ]] && npx prettier --write \"$fp\"; exit 0; }"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Example (file protection)**:
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | grep -q '\\.env' && exit 2 || exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Scenario I: Multiple Hooks Configuration
+
+When creating multiple hooks for different events:
+
+1. **Combine all hooks in one configuration**
+2. **Each event type is a separate key**
+3. **Multiple matchers can exist for the same event**
+
+**Template**:
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "[Pattern1]",
+        "hooks": [{"type": "command", "command": "[cmd1]"}]
+      },
+      {
+        "matcher": "[Pattern2]",
+        "hooks": [{"type": "command", "command": "[cmd2]"}]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "[Pattern3]",
+        "hooks": [{"type": "command", "command": "[cmd3]"}]
+      }
+    ]
+  }
+}
+```
+
+**Example (logging + formatting + notification)**:
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' >> ~/.claude/bash-log.txt"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read fp; [[ \"$fp\" == *.ts ]] && npx prettier --write \"$fp\"; exit 0; }"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "notify-send 'Claude Code' 'Awaiting input'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Scenario J: Hook with Script File
+
+When a hook requires complex logic, create a separate script file:
+
+1. **Create hooks directory**: `.claude/hooks/`
+2. **Create script file**: Python or Bash script with the logic
+3. **Reference script in settings.json**: Use `$CLAUDE_PROJECT_DIR` for project path
+
+**Template (settings.json)**:
+```json
+{
+  "hooks": {
+    "[EventType]": [
+      {
+        "matcher": "[Pattern]",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/[script_name].py\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Template (Python script)**:
+```python
+#!/usr/bin/env python3
+"""Hook script description."""
+import json
+import sys
+
+try:
+    input_data = json.load(sys.stdin)
+    file_path = input_data.get('tool_input', {}).get('file_path', '')
+
+    # Your logic here
+    # Exit 0 to allow, exit 2 to block (PreToolUse only)
+
+    sys.exit(0)
+except Exception as e:
+    print(f"Hook error: {e}", file=sys.stderr)
+    sys.exit(1)
+```
+
+**Example (markdown formatter hook)**:
+
+`settings.json`:
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/markdown_formatter.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+`.claude/hooks/markdown_formatter.py`:
+```python
+#!/usr/bin/env python3
+"""Fix markdown formatting issues."""
+import json
+import sys
+import re
+import os
+
+try:
+    input_data = json.load(sys.stdin)
+    file_path = input_data.get('tool_input', {}).get('file_path', '')
+
+    if not file_path.endswith(('.md', '.mdx')):
+        sys.exit(0)  # Not a markdown file
+
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # Fix excessive blank lines
+        content = re.sub(r'\n{3,}', '\n\n', content)
+
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content.rstrip() + '\n')
+
+        print(f"Formatted {file_path}")
+
+except Exception as e:
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
+```
+
+**Note**: Remember to make the script executable: `chmod +x .claude/hooks/markdown_formatter.py`
+
 ## File Creation Process
 
 When creating files, follow this process:
