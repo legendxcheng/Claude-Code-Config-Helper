@@ -4,7 +4,13 @@
       "Bash(tree:*)",
       "Bash(dir:*)",
       "Bash(python3:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(grep:*)",
+      "Bash(for:*)",
+      "Bash(done)",
+      "Bash(do [ -f \"resources/$res\" ])",
+      "Bash(echo:*)",
+      "Bash(do [ -f \"resources/hooks/examples/$ex\" ])"
     ]
   }
 }
