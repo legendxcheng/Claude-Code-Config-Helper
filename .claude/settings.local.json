@@ -10,7 +10,11 @@
       "Bash(done)",
       "Bash(do [ -f \"resources/$res\" ])",
       "Bash(echo:*)",
-      "Bash(do [ -f \"resources/hooks/examples/$ex\" ])"
+      "Bash(do [ -f \"resources/hooks/examples/$ex\" ])",
+      "Bash(test:*)",
+      "Bash(python:*)",
+      "Bash(printf:*)",
+      "Bash(ls:*)"
     ]
   }
 }
